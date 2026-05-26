@@ -3,7 +3,10 @@ name: Send Clan Members TXT to Discord (No GitHub Storage)
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 12 * * *" # daily at 12:00 UTC
+    - cron: "0 12 * * *"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   send_members:
@@ -21,6 +24,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Verify required secrets are present (does not print them)
+        env:
+          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
+          WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
+          WOM_VERIFICATION_CODE: ${{ secrets.WOM_VERIFICATION_CODE }}
+        run: |
+          if [ -z "$DISCORD_DEV_WH" ]; then echo "DISCORD_DEV_WH is missing/empty ❌"; exit 1; fi
+          if [ -z "$WOM_GROUP_ID" ]; then echo "WOM_GROUP_ID is missing/empty ❌"; exit 1; fi
+          # verification code isn't required for the GET call, but check if you expect it
+          if [ -z "$WOM_VERIFICATION_CODE" ]; then echo "WOM_VERIFICATION_CODE is missing/empty (ok if not needed) ⚠️"; fi
+          echo "Secrets look present ✅"
 
       - name: Generate TXT in-memory and send to Discord webhook
         env:
