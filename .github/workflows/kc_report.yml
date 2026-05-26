@@ -3,6 +3,9 @@ name: BOTW KC Report (Two Bosses)
 on:
   workflow_dispatch: {}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   report:
     runs-on: ubuntu-latest
@@ -20,12 +23,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Run KC report script
+      - name: Run KC report
         env:
           WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
-          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}   # ✅ reuse existing webhook secret
-          # Optional: set bosses here without changing code
+          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}   # ✅ reuse existing webhook
+          # Set your BOTW bosses here (WOM metric keys)
           BOSS1: zulrah
           BOSS2: vorkath
+          # Batch & pacing controls (defaults are already safe)
+          BATCH_SIZE: "10"
+          PER_REQUEST_DELAY_SECONDS: "3.3"
         run: |
           python scripts/kc_report.py
