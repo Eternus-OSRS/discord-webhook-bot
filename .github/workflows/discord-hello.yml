@@ -15,6 +15,5 @@ jobs:
         run: |
           curl -X POST \
             -H "Content-Type: application/json" \
-            -d '{"content":"Hello world from GitHub Actions 👋"}' \
+            -d "{\"content\":\"Hello world from GitHub Actions\"}" \
             "$DISCORD_DEV_WH"
-``
