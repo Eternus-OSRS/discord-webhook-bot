@@ -1,10 +1,9 @@
-name: WOM -> Discord (Secrets + API + Webhook Debug)
+name: WOM -> Discord Clan Export (TXT)
 
 on:
   workflow_dispatch: {}
 
 env:
-  # Opt into Node 24 now (silences Node 20 deprecation warnings)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
@@ -24,7 +23,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # SAFE: prints length + group id value only (does not print webhook URL)
       - name: Debug secrets (safe check)
         env:
           DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
@@ -32,14 +30,15 @@ jobs:
           WOM_VERIFICATION_CODE: ${{ secrets.WOM_VERIFICATION_CODE }}
         run: |
           echo "Webhook length: ${#DISCORD_DEV_WH}"
-          echo "WOM_GROUP_ID: ${WOM_GROUP_ID}"
+          echo "WOM_GROUP_ID is set: $([ -n "$WOM_GROUP_ID" ] && echo yes || echo no)"
           if [ -z "$DISCORD_DEV_WH" ]; then echo "DISCORD_DEV_WH is missing/empty ❌"; exit 1; fi
           if [ -z "$WOM_GROUP_ID" ]; then echo "WOM_GROUP_ID is missing/empty ❌"; exit 1; fi
           echo "✅ Secrets appear present."
 
-      - name: Run script (prints status codes)
+      - name: Run script
         env:
           DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
           WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
           WOM_VERIFICATION_CODE: ${{ secrets.WOM_VERIFICATION_CODE }}
         run: |
+          python scripts/send_clan_members.py
