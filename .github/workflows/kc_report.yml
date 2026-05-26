@@ -24,5 +24,5 @@ jobs:
 
       - name: Run script
         env:
-          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
+          WOM_INFO_WH: ${{ secrets.WOM_INFO_WH }}
         run: python scripts/kc_report.py
