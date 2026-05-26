@@ -1,34 +1,38 @@
 import os
 import requests
 
-# ✅ Use your existing webhook variable
 WEBHOOK_URL = os.getenv("DISCORD_DEV_WH")
 
-# ✅ Your BOTW competitions
 COMP1_ID = 138139
 COMP2_ID = 138140
 
 
 def get_comp_data(comp_id):
-    url = f"https://api.wiseoldman.net/v2/competitions/{comp_id}"
+    # ✅ FIX: includeDetails=true
+    url = f"https://api.wiseoldman.net/v2/competitions/{comp_id}?includeDetails=true"
+
     r = requests.get(url)
 
     if r.status_code != 200:
         raise Exception(f"Failed to fetch competition {comp_id}: {r.text}")
 
-    return r.json()
+    data = r.json()
+
+    # ✅ safety check
+    if "participants" not in data:
+        raise Exception(
+            f"Competition {comp_id} returned no participants.\nResponse keys: {list(data.keys())}"
+        )
+
+    return data
 
 
 def extract_scores(comp):
-    """
-    Extract player KC gains from competition
-    """
     scores = {}
 
     for p in comp["participants"]:
         name = p["player"]["displayName"]
 
-        # gained = KC during event
         gained = p.get("progress", {}).get("gained", 0)
 
         if gained is None:
@@ -43,7 +47,7 @@ def build_report(comp1, comp2):
     scores1 = extract_scores(comp1)
     scores2 = extract_scores(comp2)
 
-    players = set(scores1.keys()) | set(scores2.keys())
+    players = set(scores1) | set(scores2)
 
     results = []
 
@@ -51,10 +55,8 @@ def build_report(comp1, comp2):
         kc1 = scores1.get(name, 0)
         kc2 = scores2.get(name, 0)
         total = kc1 + kc2
-
         results.append((name, kc1, kc2, total))
 
-    # ✅ Sort by total KC (descending)
     results.sort(key=lambda x: x[3], reverse=True)
 
     filename = "kc_report.txt"
@@ -75,10 +77,6 @@ def build_report(comp1, comp2):
 
 
 def send_to_discord(filename, results):
-    """
-    Sends txt file + MVP message
-    """
-    # ✅ MVP (top player)
     if results:
         top = results[0]
         message = f"🏆 BOTW Leader: {top[0]} — {top[3]} KC total"
@@ -86,15 +84,18 @@ def send_to_discord(filename, results):
         message = "BOTW report generated."
 
     with open(filename, "rb") as f:
-        requests.post(
+        r = requests.post(
             WEBHOOK_URL,
             data={"content": message},
             files={"file": (filename, f)}
         )
 
+    if r.status_code != 200 and r.status_code != 204:
+        raise Exception(f"Discord upload failed: {r.text}")
+
 
 def main():
-    print("Fetching competitions...")
+    print("Fetching competitions with full details...")
 
     comp1 = get_comp_data(COMP1_ID)
     comp2 = get_comp_data(COMP2_ID)
