@@ -1,0 +1,31 @@
+name: BOTW KC Report (Two Bosses)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Run KC report script
+        env:
+          WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
+          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}   # ✅ reuse existing webhook secret
+          # Optional: set bosses here without changing code
+          BOSS1: zulrah
+          BOSS2: vorkath
+        run: |
+          python scripts/kc_report.py
