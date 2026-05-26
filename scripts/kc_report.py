@@ -7,25 +7,32 @@ COMP1_ID = 138139
 COMP2_ID = 138140
 
 
-def get_standings(comp_id):
-    url = f"https://api.wiseoldman.net/v2/competitions/{comp_id}/standings"
+def get_comp_data(comp_id):
+    url = f"https://api.wiseoldman.net/v2/competitions/{comp_id}"
 
     r = requests.get(url)
 
     if r.status_code != 200:
-        raise Exception(f"Failed to fetch standings {comp_id}: {r.text}")
+        raise Exception(f"Failed to fetch competition {comp_id}: {r.text}")
 
     return r.json()
 
 
-def extract_scores(standings):
+def extract_scores(comp):
     scores = {}
 
-    for p in standings:
-        # ✅ standings includes player object
-        name = p["player"]["displayName"]
+    for p in comp["participations"]:
 
-        gained = p.get("gained", 0)
+        # ✅ BEST: use name if present
+        if "player" in p and p["player"]:
+            name = p["player"]["displayName"]
+
+        # ✅ fallback (rare)
+        else:
+            name = f"Player_{p['playerId']}"
+
+        gained = p.get("progress", {}).get("gained", 0)
+
         if gained is None:
             gained = 0
 
@@ -34,9 +41,9 @@ def extract_scores(standings):
     return scores
 
 
-def build_report(comp1_data, comp2_data):
-    scores1 = extract_scores(comp1_data)
-    scores2 = extract_scores(comp2_data)
+def build_report(comp1, comp2):
+    scores1 = extract_scores(comp1)
+    scores2 = extract_scores(comp2)
 
     players = set(scores1) | set(scores2)
 
@@ -49,15 +56,18 @@ def build_report(comp1_data, comp2_data):
 
         results.append((name, kc1, kc2, total))
 
-    # ✅ sort by total
+    # ✅ sort by total descending
     results.sort(key=lambda x: x[3], reverse=True)
 
     filename = "kc_report.txt"
 
-    with open(filename, "w") as f:
+    boss1 = comp1.get("metric", "Boss1")
+    boss2 = comp2.get("metric", "Boss2")
+
+    with open(filename, "w", encoding="utf-8") as f:
         f.write("BOTW Combined KC Report\n\n")
 
-        f.write(f"{'Rank':<6}{'Name':<22}{'Boss1':<12}{'Boss2':<12}{'Total'}\n")
+        f.write(f"{'Rank':<6}{'Name':<22}{boss1:<12}{boss2:<12}{'Total'}\n")
         f.write("-" * 60 + "\n")
 
         for i, (name, kc1, kc2, total) in enumerate(results, 1):
@@ -66,18 +76,18 @@ def build_report(comp1_data, comp2_data):
     return filename, results
 
 
-def send_to_discord(file, results):
+def send_to_discord(filename, results):
     if results:
         top = results[0]
         message = f"🏆 BOTW Leader: {top[0]} — {top[3]} KC total"
     else:
         message = "BOTW report generated."
 
-    with open(file, "rb") as f:
+    with open(filename, "rb") as f:
         r = requests.post(
             WEBHOOK_URL,
             data={"content": message},
-            files={"file": (file, f)}
+            files={"file": (filename, f)}
         )
 
     if r.status_code not in (200, 204):
@@ -85,12 +95,12 @@ def send_to_discord(file, results):
 
 
 def main():
-    print("Fetching standings (fast mode)...")
+    print("Fetching competitions (optimal mode)...")
 
-    comp1 = get_standings(COMP1_ID)
-    comp2 = get_standings(COMP2_ID)
+    comp1 = get_comp_data(COMP1_ID)
+    comp2 = get_comp_data(COMP2_ID)
 
-    print("Combining results...")
+    print("Combining KC...")
 
     filename, results = build_report(comp1, comp2)
 
