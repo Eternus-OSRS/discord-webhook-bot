@@ -1,4 +1,4 @@
-name: Send Clan Members Excel to Discord (No GitHub Storage)
+name: Send Clan Members TXT to Discord (No GitHub Storage)
 
 on:
   workflow_dispatch: {}
@@ -22,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generate Excel in-memory and send to Discord webhook
+      - name: Generate TXT in-memory and send to Discord webhook
         env:
           DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
           WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
