@@ -1,58 +1,31 @@
 import os
 import requests
-import time
 
 WEBHOOK_URL = os.getenv("DISCORD_DEV_WH")
 
 COMP1_ID = 138139
 COMP2_ID = 138140
 
-# ✅ cache player lookups so we don't spam API
-player_cache = {}
 
+def get_standings(comp_id):
+    url = f"https://api.wiseoldman.net/v2/competitions/{comp_id}/standings"
 
-def get_comp_data(comp_id):
-    url = f"https://api.wiseoldman.net/v2/competitions/{comp_id}"
     r = requests.get(url)
 
     if r.status_code != 200:
-        raise Exception(f"Failed to fetch competition {comp_id}: {r.text}")
+        raise Exception(f"Failed to fetch standings {comp_id}: {r.text}")
 
     return r.json()
 
 
-def get_player_name(player_id):
-    if player_id in player_cache:
-        return player_cache[player_id]
-
-    url = f"https://api.wiseoldman.net/v2/players/{player_id}"
-    r = requests.get(url)
-
-    if r.status_code == 429:
-        print("Rate limited fetching player, waiting...")
-        time.sleep(3)
-        return get_player_name(player_id)
-
-    if r.status_code != 200:
-        return f"Player_{player_id}"
-
-    data = r.json()
-    name = data.get("displayName", f"Player_{player_id}")
-
-    player_cache[player_id] = name
-    return name
-
-
-def extract_scores(comp):
+def extract_scores(standings):
     scores = {}
 
-    for p in comp["participations"]:
-        player_id = p["playerId"]
+    for p in standings:
+        # ✅ standings includes player object
+        name = p["player"]["displayName"]
 
-        name = get_player_name(player_id)
-
-        gained = p.get("progress", {}).get("gained", 0)
-
+        gained = p.get("gained", 0)
         if gained is None:
             gained = 0
 
@@ -61,9 +34,9 @@ def extract_scores(comp):
     return scores
 
 
-def build_report(comp1, comp2):
-    scores1 = extract_scores(comp1)
-    scores2 = extract_scores(comp2)
+def build_report(comp1_data, comp2_data):
+    scores1 = extract_scores(comp1_data)
+    scores2 = extract_scores(comp2_data)
 
     players = set(scores1) | set(scores2)
 
@@ -76,37 +49,35 @@ def build_report(comp1, comp2):
 
         results.append((name, kc1, kc2, total))
 
+    # ✅ sort by total
     results.sort(key=lambda x: x[3], reverse=True)
 
     filename = "kc_report.txt"
 
-    boss1 = comp1.get("metric", "Boss1")
-    boss2 = comp2.get("metric", "Boss2")
-
-    with open(filename, "w", encoding="utf-8") as f:
+    with open(filename, "w") as f:
         f.write("BOTW Combined KC Report\n\n")
 
-        f.write(f"{'Name':<22}{boss1:<14}{boss2:<14}{'Total'}\n")
+        f.write(f"{'Rank':<6}{'Name':<22}{'Boss1':<12}{'Boss2':<12}{'Total'}\n")
         f.write("-" * 60 + "\n")
 
-        for name, kc1, kc2, total in results:
-            f.write(f"{name:<22}{kc1:<14}{kc2:<14}{total}\n")
+        for i, (name, kc1, kc2, total) in enumerate(results, 1):
+            f.write(f"{i:<6}{name:<22}{kc1:<12}{kc2:<12}{total}\n")
 
     return filename, results
 
 
-def send_to_discord(filename, results):
+def send_to_discord(file, results):
     if results:
         top = results[0]
-        message = f"🏆 BOTW Leader: {top[0]} — {top[3]} total KC"
+        message = f"🏆 BOTW Leader: {top[0]} — {top[3]} KC total"
     else:
         message = "BOTW report generated."
 
-    with open(filename, "rb") as f:
+    with open(file, "rb") as f:
         r = requests.post(
             WEBHOOK_URL,
             data={"content": message},
-            files={"file": (filename, f)}
+            files={"file": (file, f)}
         )
 
     if r.status_code not in (200, 204):
@@ -114,12 +85,12 @@ def send_to_discord(filename, results):
 
 
 def main():
-    print("Fetching competitions...")
+    print("Fetching standings (fast mode)...")
 
-    comp1 = get_comp_data(COMP1_ID)
-    comp2 = get_comp_data(COMP2_ID)
+    comp1 = get_standings(COMP1_ID)
+    comp2 = get_standings(COMP2_ID)
 
-    print("Building report...")
+    print("Combining results...")
 
     filename, results = build_report(comp1, comp2)
 
