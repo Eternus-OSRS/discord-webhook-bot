@@ -30,7 +30,7 @@ def get_comp_data(comp_id):
 def extract_scores(comp):
     scores = {}
 
-    for p in comp["participants"]:
+    for p in comp["participations"]:
         name = p["player"]["displayName"]
 
         gained = p.get("progress", {}).get("gained", 0)
