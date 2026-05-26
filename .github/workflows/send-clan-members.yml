@@ -1,0 +1,31 @@
+name: Send Clan Members Excel to Discord (No GitHub Storage)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 12 * * *" # daily at 12:00 UTC
+
+jobs:
+  send_members:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code (script only)
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate Excel in-memory and send to Discord webhook
+        env:
+          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
+          WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
+          WOM_VERIFICATION_CODE: ${{ secrets.WOM_VERIFICATION_CODE }}
+        run: |
+          python scripts/send_clan_members.py
