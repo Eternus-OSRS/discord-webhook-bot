@@ -1,7 +1,7 @@
 import os
 import requests
 
-WEBHOOK_URL = os.getenv("DISCORD_DEV_WH")
+WEBHOOK_URL = os.getenv("WOM_INFO_WH")
 
 COMP1_ID = 138139
 COMP2_ID = 138140
