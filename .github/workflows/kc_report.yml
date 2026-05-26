@@ -2,8 +2,6 @@ name: BOTW KC Report
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 */6 * * *"  # every 6 hours
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
