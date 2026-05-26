@@ -1,16 +1,17 @@
-name: Send Clan Members TXT to Discord (No GitHub Storage)
+name: WOM -> Discord (Secrets + API + Webhook Debug)
 
 on:
   workflow_dispatch: {}
 
 env:
+  # Opt into Node 24 now (silences Node 20 deprecation warnings)
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   send_members:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code (script only)
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -23,19 +24,22 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Verify required secrets are present (no values printed)
-        env:
-          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
-          WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
-        run: |
-          if [ -z "$DISCORD_DEV_WH" ]; then echo "DISCORD_DEV_WH is missing/empty ❌"; exit 1; fi
-          if [ -z "$WOM_GROUP_ID" ]; then echo "WOM_GROUP_ID is missing/empty ❌"; exit 1; fi
-          echo "Secrets look present ✅"
-
-      - name: Run script (show full traceback on error)
+      # SAFE: prints length + group id value only (does not print webhook URL)
+      - name: Debug secrets (safe check)
         env:
           DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
           WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
           WOM_VERIFICATION_CODE: ${{ secrets.WOM_VERIFICATION_CODE }}
         run: |
-          python -u scripts/send_clan_members.py
+          echo "Webhook length: ${#DISCORD_DEV_WH}"
+          echo "WOM_GROUP_ID: ${WOM_GROUP_ID}"
+          if [ -z "$DISCORD_DEV_WH" ]; then echo "DISCORD_DEV_WH is missing/empty ❌"; exit 1; fi
+          if [ -z "$WOM_GROUP_ID" ]; then echo "WOM_GROUP_ID is missing/empty ❌"; exit 1; fi
+          echo "✅ Secrets appear present."
+
+      - name: Run script (prints status codes)
+        env:
+          DISCORD_DEV_WH: ${{ secrets.DISCORD_DEV_WH }}
+          WOM_GROUP_ID: ${{ secrets.WOM_GROUP_ID }}
+          WOM_VERIFICATION_CODE: ${{ secrets.WOM_VERIFICATION_CODE }}
+        run: |
